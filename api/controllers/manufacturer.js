@@ -1,5 +1,5 @@
 const Model = require('../../models');
-const {Product, Manufacturer} = Model;
+const {Manufacturer} = Model;
 
 const manufacturerController = {
   all (req, res) {
@@ -7,18 +7,37 @@ const manufacturerController = {
     Manufacturer.find({})
       .exec((err, manufacturers) => res.json(manufacturers))
   },
+  byId (req, res) {
+    const idParam = req.params.id;
+    // Returns a single product based on the passed in ID parameter
+    Manufacturer.findOne({_id: idParam})
+      .then(manufacturer => res.json(manufacturer))
+      .catch(err => console.log('Error getting manufacturer ', req.params.id));
+  },
   create (req, res) {
     const requestBody = req.body;
     // Creates a new record from a submitted form
     const newManufacturer = new Manufacturer(requestBody);
-    // and saves the record to the data base
-    newManufacturer.save((err, saved) => {
-      // Returns the saved product after a successful save
-      Manufacturer
-        .findOne({_id: saved._id})
-        .exec((err, Manufacturer) => res.json(Manufacturer));
+    newManufacturer.save()
+      .then(saved => res.json(saved))
+      .catch(err => console.log('Error creating manufacturer ', req.body.name));
+  },
+  update (req, res) {
+    const idParam = req.params.id;
+    Manufacturer.findById({_id: idParam}, (err, manufacturerDocument) => {
+      // updates the manufacturer payload
+      manufacturerDocument.name = req.body.name;
+      manufacturerDocument.save()
+      .then(saved => res.json(saved))
+      .catch(err => console.log('Error updating manufacturer ', req.body.name));
     });
   },
+  remove (req, res) {
+    const idParam = req.params.id;
+    Manufacturer.deleteOne({_id: idParam})
+      .then(() => res.json("OK"))
+      .catch(err => console.log('Error removing manufacturer ', idParam));
+  } ,
 };
 
 module.exports = manufacturerController;

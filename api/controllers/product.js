@@ -30,90 +30,83 @@ const productController = {
       .populate('manufacturer')
       .exec((err, product) => res.json(product));
   },
-  create (req, res) {
+  createUpdate (req, res) {
     // Creates a new record from a submitted form
     let form = new IncomingForm();
     let newFileName = '';
+    let idParam = '';
+    // managing the file (if there is one)
     form.on('fileBegin', (name, file) => {
-      const currentPath = process.cwd();
-      const uploadDir = `${currentPath}/public/images/productImages/`;
-      const [fileName, fileExt] = file.name.split('.');
-      newFileName = `${fileName}_${new Date().getTime()}.${fileExt}`;
-      file.path = path.join(uploadDir, newFileName);
+      newFileName = file.name;
+      file.path = path.join(getImagePath(), newFileName);
     });
     form.parse(req, (err, fields, files) => {
-      let newProduct = new Product({
-        name: fields.name,
-        price: fields.price,
-        description: fields.description,
-        imageName: newFileName,
-        manufacturer: fields.manufacturer,
-      });
-      newProduct.save((err, saved) => {
-        // Returns the saved product after a successful save
-        Product
-          .findOne({_id: saved._id})
-          .populate('manufacturer')
-          .exec((err, product) => res.json(product));
-      });
+      idParam = fields.id;
+      let isNewProduct = isEmpty(idParam);
+      let oldImageName = '';
+      let product = new Product();
+      // creating the new product to be saved in the database
+      if (!isNewProduct) {
+        product._id = idParam;
+      }
+      product.name = fields.name;
+      product.price = fields.price;
+      product.description = fields.description;
+      product.imageName = newFileName;
+      product.manufacturer = fields.manufacturer;
+
+      if (isNewProduct) {
+        // if it is a new product, we just save it
+        product.save((err, saved) => res.json(saved));
+      } else {
+        // if the object already existed, the it must be found in the database to be updated
+        Product.findById({_id: idParam}, (err, productDocument) => {
+          // updates the product payload
+          productDocument.name = product.name;
+          productDocument.description = product.description;
+          productDocument.price = product.price;
+          productDocument.manufacturer = product.manufacturer;
+          if (!isEmpty(newFileName)) {
+            // checking whether a new image must be uploaded
+            newFileName = product.imageName;
+            oldImageName = productDocument.imageName;
+            productDocument.imageName = product.imageName;
+          }
+
+          if (!isEmpty(newFileName)) {
+            const uploadDir = getImagePath();
+            const oldImagePath = `${uploadDir}${oldImageName}`;
+            deleteImage(oldImagePath);
+          }
+          // saves the product
+          productDocument.save((err, saved) => res.json(saved));
+        });
+      }
     });
     form.on('error', (err) => {
       console.log('error ', JSON.stringify(err));
     });
   },
-  update (req, res) {
-    console.log('UPDATE product ');
-    const idParam = req.params.id;
-    console.log('id ', idParam);
-    let product = req.body;
-    let form = new IncomingForm();
-    let newFileName = '';
-    let updateProduct = new Product();
-    form.on('fileBegin', function (name, file) {
-      console.log('*****************fileBegin  ');
-      const currentPath = process.cwd();
-      const uploadDir = `${currentPath}/public/images/productImages/`;
-      const [fileName, fileExt] = file.name.split('.');
-      newFileName = `${fileName}_${new Date().getTime()}.${fileExt}`;
-      file.path = path.join(uploadDir, newFileName);
-      console.log('*********END fileBegin');
-    });
-    form.parse(req, (err, fields, files) => {
-      console.log('*********PARSE ', fields.name);
-      updateProduct.name = fields.name;
-      updateProduct.price = fields.price;
-      updateProduct.description = fields.description;
-      updateProduct.imageName = fields.fileName;
-      updateProduct.manufacturer = fields.manufacturer;
-      console.log('*******END PARSE');
-    }).then(() => {
-      // Finds a product to be updated
-      Product.findById({_id: idParam}, (err, productDocument) => {
-        // Updates the product payload
-        productDocument.name = updateProduct.name;
-        productDocument.description = updateProduct.description;
-        console.log('new desc', updateProduct.description);
-        productDocument.price = updateProduct.price;
-        console.log('new price ', updateProduct.price);
-        productDocument.manufacturer = updateProduct.manufacturer;
-        if (productDocument.imageName !== updateProduct.imageName) {
-          // checking whether a new image must be uploaded
-          newFileName = updateProduct.imageName;
-          productDocument.imageName = updateProduct.imageName;
-          console.log('new image ', updateProduct.imageName);
-        }
-        // Saves the product
-        productDocument.save(() => res.json(updated));
-      });
-    })
-    .catch(err => console.log('ERROR update ', err));
-  },
   remove (req, res) {
     const idParam = req.params.id;
     // Removes a product
-    Product.findOne({_id: idParam}).remove( (err, removed) => res.json(idParam));
-  }
+    Product.findById({_id: idParam}, (err, productDocument) => {
+      if (err) {
+        console.log('ERROR ', err);
+      } else {
+        // checking whether a new image must be uploaded
+        const uploadDir = getImagePath();
+        const removeImageName = `${uploadDir}${productDocument.imageName}`;
+        if (!isEmpty(productDocument.imageName)) {
+          deleteImage(removeImageName);
+        }
+      }
+    })
+    .then(() => Product.deleteOne({_id: idParam}, (err) => res.json("OK")))
+    .catch(err => console.log('error neuvo ', err));
+  },
 };
+module.exports = productController;
 
 function buildProduct (itemResult) {
   const currentPath = process.cwd();
@@ -132,9 +125,32 @@ function buildProduct (itemResult) {
   };
   if (!isEmpty(itemResult.imageName)) {
     let fileName = `${uploadDir}${itemResult.imageName}`;
-    productItem.image =  fs.readFileSync(fileName).toString('base64');
+    try {
+      productItem.image =  fs.readFileSync(fileName).toString('base64');
+    } catch (err)  {
+      productItem.image =  '';
+      console.log('Error reading an image ', err);
+    }
+
   }
   return productItem;
-};
+}
 
-module.exports = productController;
+function deleteImage (imageName) {
+  fs.unlink(imageName, (err) => {
+    if(err && err.code == 'ENOENT') {
+      // file doens't exist
+      console.log("File doesn't exist, won't remove it.");
+    } else if (err) {
+      // other errors, e.g. maybe we don't have enough permission
+      console.log("Error occurred while trying to remove file");
+    } else {
+      console.log(`removed`);
+    }
+  });
+}
+
+function getImagePath () {
+  const imagePath = process.cwd();
+  return `${imagePath}/public/images/productImages/`;
+}
