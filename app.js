@@ -13,6 +13,7 @@ require('dotenv').config();
 
 // Database setup
 mongoose.Promise = global.Promise;
+mongoose.set('useFindAndModify', false);
 mongoose.connect(`mongodb://${process.env.DB_USER}:${process.env.DB_PASSWORD}@${process.env.DB_URL}`, { useNewUrlParser: true });
 // mongodb://<dbuser>:<dbpassword>@ds020228.mlab.com:20228/eshop
 // CORS setup
@@ -57,5 +58,5 @@ app.use(function(err, req, res, next) {
   res.status(err.status || 500);
   res.render('error');
 });
-
+app.listen(3030);
 module.exports = app;

@@ -1,16 +1,14 @@
-const fs = require('fs');
 const path = require('path');
-// const util = require('util');
 const IncomingForm = require('formidable');
 const { isEmpty, each } = require('lodash');
 const Model = require('../../models');
 const { Product, Manufacturer } = Model;
+const { buildProduct, deleteImage, getImagePath } = require('../utils/product');
 
 const productController = {
   all (req, res) {
     // Returns all products
     Product.find({})
-      // manufacturer information
       .populate('manufacturer')
       .exec((err, products) => {
         productsResults = [];
@@ -92,7 +90,7 @@ const productController = {
     // Removes a product
     Product.findById({_id: idParam}, (err, productDocument) => {
       if (err) {
-        console.log('ERROR ', err);
+        console.log('Error finding the product to remove: ', err);
       } else {
         // checking whether a new image must be uploaded
         const uploadDir = getImagePath();
@@ -103,54 +101,20 @@ const productController = {
       }
     })
     .then(() => Product.deleteOne({_id: idParam}, (err) => res.json("OK")))
-    .catch(err => console.log('error neuvo ', err));
+    .catch(err => console.log('Error removing a product: ', err));
+  },
+
+  findManyProducts (idCollection) {
+    console.log('IN findManyProducts ', idCollection);
+    Product.find({_id: { $in: idCollection } },
+      (error, productList) => {
+        if (error) {
+          console.log('error in findManyProducts ', error);
+          return {};
+        }
+        console.log(productList);
+        return productList;
+      });
   },
 };
 module.exports = productController;
-
-function buildProduct (itemResult) {
-  const currentPath = process.cwd();
-  const uploadDir = `${currentPath}/public/images/productImages/`;
-  productItem = {
-    _id: itemResult._id,
-    name: itemResult.name,
-    price: itemResult.price,
-    description: itemResult.description,
-    imageName: itemResult.imageName,
-    manufacturer: {
-      id: itemResult.manufacturer._id,
-      name: itemResult.manufacturer.name,
-    },
-    image: '',
-  };
-  if (!isEmpty(itemResult.imageName)) {
-    let fileName = `${uploadDir}${itemResult.imageName}`;
-    try {
-      productItem.image =  fs.readFileSync(fileName).toString('base64');
-    } catch (err)  {
-      productItem.image =  '';
-      console.log('Error reading an image ', err);
-    }
-
-  }
-  return productItem;
-}
-
-function deleteImage (imageName) {
-  fs.unlink(imageName, (err) => {
-    if(err && err.code == 'ENOENT') {
-      // file doens't exist
-      console.log("File doesn't exist, won't remove it.");
-    } else if (err) {
-      // other errors, e.g. maybe we don't have enough permission
-      console.log("Error occurred while trying to remove file");
-    } else {
-      console.log(`removed`);
-    }
-  });
-}
-
-function getImagePath () {
-  const imagePath = process.cwd();
-  return `${imagePath}/public/images/productImages/`;
-}

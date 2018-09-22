@@ -1,7 +1,8 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema,
   model = mongoose.model.bind(mongoose),
-  ObjectId = mongoose.Schema.Types.ObjectId;
+  ObjectId = mongoose.Schema.Types.ObjectId,
+  Types = mongoose.Types;
 
 const productSchema = Schema({
   id: ObjectId,
@@ -18,7 +19,19 @@ const manufacturerSchema = Schema({
   name: String,
 });
 
+const cartSchema = Schema({
+  id: ObjectId,
+  expire: Date,
+  items: [
+    {
+      product_id: String,
+      amount: Number,
+    }
+  ]
+});
+
 const Product = model('Product', productSchema);
 const Manufacturer = model('Manufacturer', manufacturerSchema);
+const Cart = model('Cart', cartSchema);
 
-module.exports = {Product, Manufacturer};
+module.exports = {Product, Manufacturer, Cart, Types};
