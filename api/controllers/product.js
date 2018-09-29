@@ -1,10 +1,13 @@
 const path = require('path');
 const IncomingForm = require('formidable');
 const { isEmpty, each } = require('lodash');
-const Model = require('../../models');
-const { Product, Manufacturer } = Model;
-const { buildProduct, deleteImage, getImagePath } = require('../utils/product');
+const { Product } = require('../../models/product');
+const { Manufacturer } = require('../../models/manufacturer');
+const { buildProduct, deleteImage, getImagePath } = require('../../dao/product');
 
+/****************************************
+          Product Controller
+*****************************************/
 const productController = {
   all (req, res) {
     // Returns all products

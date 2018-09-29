@@ -1,7 +1,7 @@
-const Model = require('../../models');
-const { Cart, Types, Product } = Model;
 const { each, isEmpty } = require('lodash');
-const { buildProduct } = require('../utils/product');
+const { Cart } = require('../models/cart');
+const { Product, Types } = require('../models/product');
+const { buildProduct } = require('./product');
 
 function buildFullCart (cart, callback) {
   let fullCart = {};

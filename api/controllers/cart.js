@@ -1,9 +1,9 @@
-const Model = require('../../models');
-const { Cart, Types, Product } = Model;
+const { Cart } = require('../../models/cart');
+const { Product } = require('../../models/product');
 const { each, isEmpty } = require('lodash');
 const { findManyProducts } = require('./product');
-const { buildProduct } = require('../utils/product');
-const { buildFullCart } = require('../utils/cartDB');
+const { buildProduct } = require('../../dao/product');
+const { buildFullCart } = require('../../dao/cartDao');
 
 const cartController = {
   get (req, res) {
