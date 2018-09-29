@@ -1,5 +1,4 @@
-const Model = require('../../models');
-const {Manufacturer} = Model;
+const { Manufacturer } = require('../../models/manufacturer');
 
 const manufacturerController = {
   all (req, res) {

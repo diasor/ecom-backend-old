@@ -4,6 +4,9 @@ const Schema = mongoose.Schema,
   ObjectId = mongoose.Schema.Types.ObjectId,
   Types = mongoose.Types;
 
+  /****************************************
+        Product Schema Definition
+  *****************************************/
 const productSchema = Schema({
   id: ObjectId,
   name: String,
@@ -14,24 +17,6 @@ const productSchema = Schema({
   manufacturer: {type: ObjectId, ref: 'Manufacturer'}
 });
 
-const manufacturerSchema = Schema({
-  id: ObjectId,
-  name: String,
-});
-
-const cartSchema = Schema({
-  id: ObjectId,
-  expire: Date,
-  items: [
-    {
-      product_id: String,
-      amount: Number,
-    }
-  ]
-});
-
 const Product = model('Product', productSchema);
-const Manufacturer = model('Manufacturer', manufacturerSchema);
-const Cart = model('Cart', cartSchema);
 
-module.exports = {Product, Manufacturer, Cart, Types};
+module.exports = {Product, Types};
